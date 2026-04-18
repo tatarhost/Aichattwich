@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Twitch AI Voice Chat</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tmi.js/1.8.5/tmi.min.js"></script>
+    <style>
+        :root { --twitch-purple: #9147ff; --bg: #0e0e10; --panel: #18181b; --text: #efeff1; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        
+        header { background: var(--panel); padding: 15px; border-bottom: 2px solid #303032; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        input { background: #000; border: 1px solid #3f3f46; color: white; padding: 10px; border-radius: 5px; flex: 1; min-width: 200px; }
+        button { background: var(--twitch-purple); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #772ce8; }
+
+        #status { font-size: 12px; padding: 5px 15px; background: #26262c; color: #adadb8; }
+        #chat { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        
+        .msg { background: var(--panel); padding: 10px; border-radius: 6px; border-left: 4px solid transparent; max-width: 80%; }
+        .msg.user-msg { border-left-color: var(--twitch-purple); }
+        .msg.ai-msg { border-left-color: #00ffcc; align-self: flex-start; background: #1e292b; }
+        .nickname { font-weight: bold; color: #bf94ff; margin-bottom: 4px; display: block; }
+        
+        .controls-alt { font-size: 13px; color: #adadb8; margin-left: 10px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <input type="text" id="channelName" placeholder="Впишите свой ник (канал)...">
+    <button id="startBtn">Подключиться и запустить голос</button>
+    <div class="controls-alt">Команда в чате: <b>/ai ваш запрос</b> или <b>!ai</b></div>
+</header>
+
+<div id="status">Статус: Ожидание ввода...</div>
+<div id="chat"></div>
+
+<script>
+    const chat = document.getElementById('chat');
+    const status = document.getElementById('status');
+    const channelInput = document.getElementById('channelName');
+    const startBtn = document.getElementById('startBtn');
+
+    let client = null;
+
+    // Функция озвучки
+    function speak(text, pitch = 1) {
+        // Проверка: поддерживает ли браузер голос
+        if (!window.speechSynthesis) return;
+
+        const ut = new SpeechSynthesisUtterance(text);
+        ut.lang = 'ru-RU';
+        ut.pitch = pitch; 
+        ut.rate = 1.0;
+
+        // Находим русский голос если есть
+        const voices = window.speechSynthesis.getVoices();
+        const ruVoice = voices.find(v => v.lang.includes('RU'));
+        if (ruVoice) ut.voice = ruVoice;
+
+        window.speechSynthesis.speak(ut);
+    }
+
+    // Функция ИИ (Без ключа)
+    async function askAI(query) {
+        try {
+            status.innerText = "ИИ думает...";
+            const response = await fetch(`https://text.pollinations.ai/${encodeURIComponent(query)}?model=openai`);
+            const text = await response.text();
+            status.innerText = "Статус: Подключено. Жду сообщений...";
+            return text;
+        } catch (e) {
+            return "Не удалось получить ответ от ИИ.";
+        }
+    }
+
+    function addMessage(user, text, isAI = false) {
+        const div = document.createElement('div');
+        div.className = `msg ${isAI ? 'ai-msg' : 'user-msg'}`;
+        div.innerHTML = `<span class="nickname">${user}</span> <span>${text}</span>`;
+        chat.appendChild(div);
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+    startBtn.onclick = () => {
+        const channel = channelInput.value.trim().toLowerCase();
+        if (!channel) return alert("Введите ник канала!");
+
+        // Инициализация голоса (нужно для разблокировки в браузере)
+        speak("Голосовое сопровождение активировано");
+
+        if (client) client.disconnect();
+
+        client = new tmi.Client({
+            connection: { secure: true, reconnect: true },
+            channels: [channel]
+        });
+
+        client.connect().then(() => {
+            status.innerText = `Статус: Подключено к ${channel}. Команды /ai и !ai работают.`;
+        }).catch(err => {
+            status.innerText = `Ошибка: ${err}`;
+        });
+
+        client.on('message', async (target, tags, message, self) => {
+            if (self) return;
+
+            const user = tags['display-name'] || tags.username;
+            
+            // 1. Отображаем и озвучиваем обычное сообщение
+            addMessage(user, message);
+            speak(`${user} говорит: ${message}`, 1.2);
+
+            // 2. Обработка ИИ (команды /ai или !ai)
+            if (message.startsWith('/ai') || message.startsWith('!ai')) {
+                const prompt = message.substring(3).trim(); // Убираем первые 3 символа (/ai или !ai)
+                
+                if (prompt.length < 2) return;
+
+                const aiResponse = await askAI(prompt);
+                
+                addMessage("ИИ", aiResponse, true);
+                speak(`ИИ отвечает: ${aiResponse}`, 0.9);
+            }
+        });
+    };
+
+    // Предзагрузка голосов
+    window.speechSynthesis.getVoices();
+</script>
+
+</body>
+</html>

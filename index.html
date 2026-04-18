@@ -3,151 +3,168 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Twitch AI CyberTTS</title>
-    
-    <!-- Используем другой надежный CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tmi.js/1.8.5/tmi.min.js"></script>
-
+    <title>Twitch AI CyberTTS (No-Lib Edition)</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
         body { background: #0e0e10; color: #efeff1; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
-        .cyber-app { max-width: 800px; width: 100%; background: #18181b; border: 1px solid #2d2d35; border-radius: 20px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .app { max-width: 850px; width: 100%; background: #18181b; border: 1px solid #2d2d35; border-radius: 20px; padding: 25px; box-shadow: 0 15px 40px rgba(0,0,0,0.6); }
         .header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
-        .logo { font-weight: bold; font-size: 1.4rem; color: #9147ff; margin-right: auto; }
-        .channel-control { display: flex; gap: 10px; background: #000; padding: 5px; border-radius: 30px; border: 1px solid #333; }
-        .channel-control input { background: transparent; border: none; color: #fff; padding: 8px 15px; outline: none; width: 140px; }
-        .connect-btn { background: #9147ff; border: none; color: #fff; padding: 10px 20px; border-radius: 25px; cursor: pointer; font-weight: bold; }
-        .connect-btn:hover { background: #772ce8; }
-        .status { font-size: 0.8rem; display: flex; align-items: center; gap: 5px; }
-        .led { width: 8px; height: 8px; border-radius: 50%; background: gray; }
-        .led.online { background: #00ffcc; box-shadow: 0 0 8px #00ffcc; }
-        .chat-window { background: #0a0a0c; height: 350px; border-radius: 12px; padding: 15px; overflow-y: auto; margin: 15px 0; border: 1px solid #222; display: flex; flex-direction: column; gap: 8px; }
-        .msg { font-size: 0.9rem; line-height: 1.4; padding: 5px 10px; background: #1f1f23; border-radius: 8px; }
-        .msg.ai { border-left: 3px solid #00ffcc; background: #141f1e; }
-        .msg b { color: #bf94ff; }
+        .logo { font-weight: bold; font-size: 1.5rem; background: linear-gradient(45deg, #9147ff, #00ffcc); -webkit-background-clip: text; color: transparent; margin-right: auto; }
+        .control { display: flex; gap: 8px; background: #0e0e10; padding: 5px 5px 5px 15px; border-radius: 40px; border: 1px solid #3a3a44; }
+        input { background: transparent; border: none; color: #fff; outline: none; width: 150px; font-size: 1rem; }
+        button { background: #9147ff; border: none; color: white; padding: 10px 20px; border-radius: 30px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        button:hover { background: #772ce8; }
+        .status { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; background: #232329; padding: 8px 15px; border-radius: 20px; }
+        .led { width: 9px; height: 9px; border-radius: 50%; background: #444; transition: 0.3s; }
+        .led.on { background: #00ffcc; box-shadow: 0 0 10px #00ffcc; }
+        .chat { background: #0a0a0c; height: 380px; border-radius: 15px; padding: 15px; overflow-y: auto; border: 1px solid #2f2f3a; margin: 15px 0; display: flex; flex-direction: column; gap: 8px; }
+        .msg { padding: 8px 12px; border-radius: 10px; background: #1f1f23; font-size: 0.95rem; border-left: 3px solid #9147ff; animation: slideIn 0.2s ease; }
+        .msg.ai { border-left-color: #00ffcc; background: #141f1e; }
+        .msg b { color: #bf94ff; margin-right: 5px; }
         .msg.ai b { color: #00ffcc; }
-        .controls { display: flex; gap: 20px; font-size: 0.85rem; color: #adadb8; }
+        .opt { display: flex; gap: 20px; font-size: 0.9rem; color: #adadb8; padding-left: 5px; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
     </style>
 </head>
 <body>
 
-<div class="cyber-app">
+<div class="app">
     <div class="header">
-        <div class="logo">◈ NEURO·TTS</div>
-        <div class="channel-control">
-            <input type="text" id="channelInput" placeholder="Ник канала" spellcheck="false">
-            <button class="connect-btn" id="connectBtn">СТАРТ</button>
+        <div class="logo">◈ NEURO·IRC</div>
+        <div class="control">
+            <input type="text" id="chInput" placeholder="канал..." spellcheck="false">
+            <button id="startBtn">ПОДКЛЮЧИТЬ</button>
         </div>
         <div class="status">
             <div id="led" class="led"></div>
-            <span id="statusTxt">ОФЛАЙН</span>
+            <span id="stTxt">ОФЛАЙН</span>
         </div>
     </div>
 
-    <div class="controls">
-        <label><input type="checkbox" id="ttsChat" checked> Чат</label>
-        <label><input type="checkbox" id="ttsAI" checked> ИИ (!ai)</label>
+    <div class="opt">
+        <label><input type="checkbox" id="useChat" checked> Озвучка чата</label>
+        <label><input type="checkbox" id="useAI" checked> Озвучка ИИ</label>
     </div>
 
-    <div id="chat" class="chat-window"></div>
+    <div id="chatBox" class="chat"></div>
+
+    <div style="font-size: 0.75rem; color: #555; text-align: right;">WebSocket (Native) · Pollinations AI</div>
 </div>
 
 <script>
     (function() {
-        let client = null;
-        let audioOk = false;
+        let ws = null;
+        let audioActive = false;
+        let lastAiSpeech = false;
 
-        const btn = document.getElementById('connectBtn');
-        const input = document.getElementById('channelInput');
-        const chatBox = document.getElementById('chat');
+        const btn = document.getElementById('startBtn');
+        const input = document.getElementById('chInput');
+        const chat = document.getElementById('chatBox');
         const led = document.getElementById('led');
-        const statusTxt = document.getElementById('statusTxt');
+        const stTxt = document.getElementById('stTxt');
 
-        function addMsg(user, text, isAI = false) {
-            const d = document.createElement('div');
-            d.className = 'msg' + (isAI ? ' ai' : '');
-            d.innerHTML = `<b>${user}:</b> ${text}`;
-            chatBox.appendChild(d);
-            chatBox.scrollTop = chatBox.scrollHeight;
+        function addMessage(user, text, isAI = false) {
+            const div = document.createElement('div');
+            div.className = 'msg' + (isAI ? ' ai' : '');
+            div.innerHTML = `<b>${user}:</b> ${text}`;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
         }
 
         function speak(text, isAI = false) {
-            if (!audioOk) return;
-            if (isAI && !document.getElementById('ttsAI').checked) return;
-            if (!isAI && !document.getElementById('ttsChat').checked) return;
+            if (!audioActive) return;
+            if (isAI && !document.getElementById('useAI').checked) return;
+            if (!isAI && !document.getElementById('useChat').checked) return;
 
-            // Чтобы голоса не накладывались
-            if (isAI) window.speechSynthesis.cancel(); 
+            // ИИ имеет приоритет и прерывает всё
+            if (isAI) window.speechSynthesis.cancel();
+            else if (window.speechSynthesis.speaking && lastAiSpeech) return;
 
-            const utter = new SpeechSynthesisUtterance(text.replace(/[^\p{L}\p{N}\s.,!?]/gu, ''));
+            const clean = text.replace(/(https?:\/\/[^\s]+)/g, 'ссылка').replace(/[^\p{L}\p{N}\s.,!?]/gu, '');
+            const utter = new SpeechSynthesisUtterance(clean);
             utter.lang = 'ru-RU';
+            lastAiSpeech = isAI;
             window.speechSynthesis.speak(utter);
         }
 
-        async function connect() {
-            // Проверка: загрузилась ли библиотека tmi
-            if (typeof tmi === 'undefined') {
-                alert("Ошибка: Библиотека Twitch (tmi.js) не загружена. Проверьте интернет или отключите AdBlock.");
-                return;
-            }
+        async function fetchAI(q) {
+            try {
+                const r = await fetch(`https://text.pollinations.ai/${encodeURIComponent(q)}?model=openai`);
+                return await r.text();
+            } catch(e) { return "Ошибка нейросети."; }
+        }
 
+        function connect() {
             const channel = input.value.trim().toLowerCase();
             if (!channel) return;
 
-            audioOk = true;
-            // "Будим" синтезатор речи
+            // Активация звука (нужен клик)
+            audioActive = true;
             window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
 
-            if (client) {
-                try { await client.disconnect(); } catch(e) {}
-            }
+            if (ws) ws.close();
 
-            client = new tmi.Client({
-                connection: { secure: true, reconnect: true },
-                channels: [channel]
-            });
+            // Twitch WebSocket IRC (WSS - защищенный для GitHub)
+            ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
 
-            statusTxt.textContent = "ПОДКЛЮЧЕНИЕ...";
-
-            client.on('message', async (chan, userstate, message, self) => {
-                if (self) return;
-                const user = userstate['display-name'] || userstate.username;
+            ws.onopen = () => {
+                // Анонимный вход
+                const nick = 'justinfan' + Math.floor(Math.random() * 10000);
+                ws.send(`PASS SCHMOOPIIE`);
+                ws.send(`NICK ${nick}`);
+                ws.send(`JOIN #${channel}`);
                 
-                addMsg(user, message);
+                led.className = 'led on';
+                stTxt.textContent = `ЧАТ: ${channel}`;
+                addMessage('SYSTEM', `Подключено к #${channel}`);
+            };
 
-                if (message.toLowerCase().startsWith('!ai')) {
-                    const q = message.slice(3).trim();
-                    if (q) {
-                        try {
-                            const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(q)}?model=openai`);
-                            const answer = await res.text();
-                            addMsg('🤖 AI', answer, true);
-                            speak(answer, true);
-                        } catch(e) { addMsg('SYSTEM', 'Ошибка ИИ'); }
-                    }
-                } else {
-                    speak(message, false);
+            ws.onmessage = async (event) => {
+                const data = event.data;
+
+                // Ответ на проверку связи (чтобы не выкинуло)
+                if (data.startsWith('PING')) {
+                    ws.send('PONG :tmi.twitch.tv');
+                    return;
                 }
-            });
 
-            client.on('connected', () => {
-                led.className = 'led online';
-                statusTxt.textContent = "В СЕТИ: " + channel;
-                addMsg('SYSTEM', 'Подключено к чату ' + channel);
-            });
+                // Парсинг сообщения PRIVMSG
+                // Формат: :user!user@user.tmi.twitch.tv PRIVMSG #channel :message
+                const match = data.match(/:(\w+)!.*PRIVMSG #\w+ :(.*)/);
+                if (match) {
+                    const user = match[1];
+                    const msg = match[2].trim();
 
-            try {
-                await client.connect();
-            } catch(e) {
-                alert("Не удалось подключиться. Проверьте имя канала.");
-                statusTxt.textContent = "ОШИБКА";
-            }
+                    addMessage(user, msg);
+
+                    if (msg.toLowerCase().startsWith('!ai')) {
+                        const q = msg.slice(3).trim();
+                        if (q) {
+                            const ans = await fetchAI(q);
+                            addMessage('🤖 AI', ans, true);
+                            speak(ans, true);
+                        }
+                    } else {
+                        speak(msg, false);
+                    }
+                }
+            };
+
+            ws.onclose = () => {
+                led.className = 'led';
+                stTxt.textContent = 'ОФЛАЙН';
+                addMessage('SYSTEM', 'Соединение закрыто.');
+            };
+
+            ws.onerror = () => {
+                stTxt.textContent = 'ОШИБКА';
+            };
         }
 
         btn.addEventListener('click', connect);
         input.addEventListener('keypress', (e) => e.key === 'Enter' && connect());
-        
-        addMsg('SYSTEM', 'Введите ник и нажмите СТАРТ');
+
+        addMessage('SYSTEM', 'Введите канал и нажмите Подключить');
     })();
 </script>
 

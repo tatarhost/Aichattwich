@@ -3,59 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Twitch AI · Llama Edition</title>
+    <title>Twitch NeuroTTS · Final</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
         body { background: #09090b; color: #efeff1; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
-        .app-container { max-width: 850px; width: 100%; background: #18181b; border: 1px solid #27272a; border-radius: 20px; padding: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
-        .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
-        .logo { font-weight: 800; font-size: 1.5rem; background: linear-gradient(90deg, #9147ff, #00ffcc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .controls { display: flex; background: #09090b; padding: 4px; border-radius: 50px; border: 1px solid #3f3f46; }
-        input { background: transparent; border: none; color: #fff; padding: 8px 16px; outline: none; width: 160px; font-size: 0.95rem; }
-        button { background: #9147ff; border: none; color: white; padding: 10px 22px; border-radius: 50px; cursor: pointer; font-weight: 600; transition: 0.2s; }
-        button:hover { background: #772ce8; }
-        .status-box { display: flex; align-items: center; gap: 10px; background: #27272a; padding: 8px 16px; border-radius: 50px; font-size: 0.85rem; }
-        .led { width: 10px; height: 10px; border-radius: 50%; background: #52525b; }
+        .app { max-width: 850px; width: 100%; background: #18181b; border: 1px solid #27272a; border-radius: 20px; padding: 25px; box-shadow: 0 15px 40px rgba(0,0,0,0.6); }
+        
+        .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; }
+        .logo { font-weight: 800; font-size: 1.5rem; background: linear-gradient(90deg, #9147ff, #00ffcc); -webkit-background-clip: text; color: transparent; }
+        
+        .control-panel { display: flex; gap: 10px; background: #09090b; padding: 5px; border-radius: 50px; border: 1px solid #3f3f46; }
+        input { background: transparent; border: none; color: #fff; padding: 8px 20px; outline: none; width: 180px; font-size: 1rem; }
+        button { background: #9147ff; border: none; color: white; padding: 10px 25px; border-radius: 50px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        button:hover { background: #772ce8; transform: scale(1.02); }
+
+        .status-badge { display: flex; align-items: center; gap: 8px; background: #232329; padding: 10px 20px; border-radius: 50px; font-size: 0.85rem; }
+        .led { width: 10px; height: 10px; border-radius: 50%; background: #444; transition: 0.1s; }
         .led.on { background: #00ffcc; box-shadow: 0 0 10px #00ffcc; }
         .led.re { background: #ff4444; box-shadow: 0 0 10px #ff4444; }
-        .chat-area { background: #09090b; height: 400px; border-radius: 16px; padding: 16px; overflow-y: auto; border: 1px solid #27272a; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; }
-        .msg { padding: 10px 14px; border-radius: 12px; background: #27272a; font-size: 0.95rem; border-left: 4px solid #9147ff; animation: fadeIn 0.2s ease; }
-        .msg.ai { border-left-color: #00ffcc; background: #132a24; }
+
+        .chat-window { background: #0a0a0c; height: 420px; border-radius: 18px; padding: 15px; overflow-y: auto; border: 1px solid #2f2f3a; margin: 15px 0; display: flex; flex-direction: column; gap: 10px; }
+        .msg { padding: 10px 14px; border-radius: 12px; background: #1f1f23; font-size: 0.95rem; border-left: 4px solid #9147ff; animation: fadeIn 0.2s ease; }
+        .msg.ai { border-left-color: #00ffcc; background: #132a24; color: #e0f2fe; }
         .msg b { color: #bf94ff; margin-right: 5px; }
         .msg.ai b { color: #00ffcc; }
-        .msg.sys { background: transparent; border: none; color: #71717a; font-size: 0.8rem; }
-        .settings { display: flex; gap: 20px; font-size: 0.9rem; color: #a1a1aa; }
+        .msg.sys { border: none; background: transparent; color: #666; font-size: 0.8rem; font-style: italic; padding: 0 5px; }
+
+        .config { display: flex; gap: 20px; font-size: 0.9rem; color: #888; margin-bottom: 5px; }
+        input[type="checkbox"] { accent-color: #9147ff; }
+
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 10px; }
     </style>
 </head>
 <body>
 
-<div class="app-container">
+<div class="app">
     <div class="header">
-        <div class="logo">◈ LLAMA·FREE</div>
-        <div class="controls">
-            <input type="text" id="chInput" placeholder="Ник канала..." spellcheck="false">
-            <button id="startBtn">СТАРТ</button>
-        </div>
-        <div class="status-box">
+        <div class="logo">◈ NEURO·IRC</div>
+        <div class="status-badge">
             <div id="led" class="led"></div>
             <span id="stTxt">ОФЛАЙН</span>
         </div>
     </div>
 
-    <div class="settings">
-        <label><input type="checkbox" id="useChat" checked> Озвучка чата</label>
-        <label><input type="checkbox" id="useAI" checked> Озвучка ИИ (!ai)</label>
+    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+        <div class="control-panel">
+            <input type="text" id="chInput" placeholder="Ник канала..." spellcheck="false">
+            <button id="startBtn">ЗАПУСК</button>
+        </div>
     </div>
 
-    <div id="chatBox" class="chat-area"></div>
+    <div class="config">
+        <label><input type="checkbox" id="ttsChat" checked> Озвучка чата</label>
+        <label><input type="checkbox" id="ttsAI" checked> Озвучка ИИ (!ai)</label>
+    </div>
+
+    <div id="chatBox" class="chat-window"></div>
+    
+    <div style="font-size: 0.7rem; color: #444; text-align: right;">Llama 3.1 8B Instruct · Zero-Lib WebSocket</div>
 </div>
 
 <script>
     (function() {
-        // --- КОНФИГУРАЦИЯ ---
-        const OR_KEY = "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";
-        // Заменили на самую стабильную бесплатную модель Llama 3.1
+        // --- ВАШИ ДАННЫЕ ---
+        const OR_KEY = "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";
         const AI_MODEL = "meta-llama/llama-3.1-8b-instruct:free";
 
         let ws = null;
@@ -80,8 +93,8 @@
 
         function speak(text, isAI = false) {
             if (!audioActive) return;
-            if (isAI && !document.getElementById('useAI').checked) return;
-            if (!isAI && !document.getElementById('useChat').checked) return;
+            if (isAI && !document.getElementById('ttsAI').checked) return;
+            if (!isAI && !document.getElementById('ttsChat').checked) return;
 
             if (isAI) window.speechSynthesis.cancel();
             else if (window.speechSynthesis.speaking && lastSpeechWasAI) return;
@@ -99,35 +112,21 @@
                     method: "POST",
                     headers: {
                         "Authorization": `Bearer ${OR_KEY}`,
-                        "Content-Type": "application/json",
-                        "X-Title": "Twitch Neuro Bot"
+                        "Content-Type": "application/json"
                     },
                     body: JSON.stringify({
                         model: AI_MODEL,
                         messages: [
-                            { role: "system", content: "Ты помощник на стриме. Отвечай кратко на русском." },
+                            { role: "system", content: "Ты краткий ассистент на стриме. Отвечай на русском, весело, максимум 2 предложения." },
                             { role: "user", content: question }
-                        ],
-                        // Добавили таймаут и параметры для надежности
-                        max_tokens: 100
+                        ]
                     })
                 });
-
                 const data = await response.json();
-
-                if (data.error) {
-                    console.error("OpenRouter Error:", data.error);
-                    return `Ошибка ИИ: ${data.error.message || "Модель недоступна"}`;
-                }
-
-                if (data.choices && data.choices[0]) {
-                    return data.choices[0].message.content.trim();
-                }
-
-                return "ИИ прислал пустой ответ.";
+                if (data.error) return "Ошибка: " + data.error.message;
+                return data.choices[0].message.content.trim();
             } catch (e) {
-                console.error("Fetch Error:", e);
-                return "Ошибка сети. Возможно, API заблокирован.";
+                return "Ошибка сети при запросе к ИИ.";
             }
         }
 
@@ -142,7 +141,8 @@
                 ws.send(`NICK justinfan${Math.floor(Math.random() * 99999)}`);
                 ws.send(`JOIN #${currentChannel}`);
                 led.className = 'led on';
-                stTxt.textContent = `LIVE: ${currentChannel}`;
+                stTxt.textContent = `В СЕТИ: ${currentChannel}`;
+                addMsg('', `📡 Соединение с #${currentChannel} установлено`, 'sys');
             };
 
             ws.onmessage = async (event) => {
@@ -151,8 +151,7 @@
 
                 const match = data.match(/:(\w+)!.*PRIVMSG #\w+ :(.*)/);
                 if (match) {
-                    const user = match[1];
-                    const msg = match[2].trim();
+                    const user = match[1], msg = match[2].trim();
                     addMsg(user, msg);
 
                     if (msg.toLowerCase().startsWith('!ai')) {
@@ -160,7 +159,6 @@
                         if (q) {
                             addMsg('🤖 AI', '⚡ Обработка...', 'ai');
                             const ans = await fetchAI(q);
-                            
                             if (chat.lastElementChild && chat.lastElementChild.classList.contains('ai')) {
                                 chat.lastElementChild.innerHTML = `<b>🤖 AI:</b> ${ans}`;
                             }
@@ -174,7 +172,7 @@
 
             ws.onclose = () => {
                 led.className = 'led re';
-                stTxt.textContent = 'RECONNECT...';
+                stTxt.textContent = 'РЕКОННЕКТ...';
                 setTimeout(connect, 100);
             };
             ws.onerror = () => ws.close();
@@ -186,7 +184,6 @@
                 currentChannel = val;
                 audioActive = true;
                 window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
-                addMsg('', `📡 Подключение к #${val}...`, 'sys');
                 connect();
             }
         });

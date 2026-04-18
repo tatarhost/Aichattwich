@@ -3,27 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Twitch AI CyberTTS (No-Lib Edition)</title>
+    <title>Twitch AI CyberTTS (Auto-Reconnect)</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
         body { background: #0e0e10; color: #efeff1; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
         .app { max-width: 850px; width: 100%; background: #18181b; border: 1px solid #2d2d35; border-radius: 20px; padding: 25px; box-shadow: 0 15px 40px rgba(0,0,0,0.6); }
         .header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
         .logo { font-weight: bold; font-size: 1.5rem; background: linear-gradient(45deg, #9147ff, #00ffcc); -webkit-background-clip: text; color: transparent; margin-right: auto; }
-        .control { display: flex; gap: 8px; background: #0e0e10; padding: 5px 5px 5px 15px; border-radius: 40px; border: 1px solid #3a3a44; }
-        input { background: transparent; border: none; color: #fff; outline: none; width: 150px; font-size: 1rem; }
+        .control { display: flex; gap: 8px; background: #0e0e10; padding: 5px; border-radius: 40px; border: 1px solid #3a3a44; }
+        input { background: transparent; border: none; color: #fff; outline: none; width: 150px; padding-left: 15px; font-size: 1rem; }
         button { background: #9147ff; border: none; color: white; padding: 10px 20px; border-radius: 30px; cursor: pointer; font-weight: bold; transition: 0.2s; }
         button:hover { background: #772ce8; }
         .status { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; background: #232329; padding: 8px 15px; border-radius: 20px; }
         .led { width: 9px; height: 9px; border-radius: 50%; background: #444; transition: 0.3s; }
         .led.on { background: #00ffcc; box-shadow: 0 0 10px #00ffcc; }
+        .led.reconnect { background: #ffcc00; box-shadow: 0 0 10px #ffcc00; }
         .chat { background: #0a0a0c; height: 380px; border-radius: 15px; padding: 15px; overflow-y: auto; border: 1px solid #2f2f3a; margin: 15px 0; display: flex; flex-direction: column; gap: 8px; }
-        .msg { padding: 8px 12px; border-radius: 10px; background: #1f1f23; font-size: 0.95rem; border-left: 3px solid #9147ff; animation: slideIn 0.2s ease; }
+        .msg { padding: 8px 12px; border-radius: 10px; background: #1f1f23; font-size: 0.95rem; border-left: 3px solid #9147ff; }
         .msg.ai { border-left-color: #00ffcc; background: #141f1e; }
         .msg b { color: #bf94ff; margin-right: 5px; }
-        .msg.ai b { color: #00ffcc; }
-        .opt { display: flex; gap: 20px; font-size: 0.9rem; color: #adadb8; padding-left: 5px; }
-        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+        .msg.sys { font-style: italic; color: #777; border-left: none; background: transparent; padding: 2px 12px; }
+        .opt { display: flex; gap: 20px; font-size: 0.9rem; color: #adadb8; }
     </style>
 </head>
 <body>
@@ -33,7 +33,7 @@
         <div class="logo">◈ NEURO·IRC</div>
         <div class="control">
             <input type="text" id="chInput" placeholder="канал..." spellcheck="false">
-            <button id="startBtn">ПОДКЛЮЧИТЬ</button>
+            <button id="startBtn">СТАРТ</button>
         </div>
         <div class="status">
             <div id="led" class="led"></div>
@@ -42,13 +42,11 @@
     </div>
 
     <div class="opt">
-        <label><input type="checkbox" id="useChat" checked> Озвучка чата</label>
-        <label><input type="checkbox" id="useAI" checked> Озвучка ИИ</label>
+        <label><input type="checkbox" id="useChat" checked> Чат</label>
+        <label><input type="checkbox" id="useAI" checked> ИИ (!ai)</label>
     </div>
 
     <div id="chatBox" class="chat"></div>
-
-    <div style="font-size: 0.75rem; color: #555; text-align: right;">WebSocket (Native) · Pollinations AI</div>
 </div>
 
 <script>
@@ -56,6 +54,8 @@
         let ws = null;
         let audioActive = false;
         let lastAiSpeech = false;
+        let currentChannel = "";
+        let reconnectTimer = null;
 
         const btn = document.getElementById('startBtn');
         const input = document.getElementById('chInput');
@@ -63,10 +63,10 @@
         const led = document.getElementById('led');
         const stTxt = document.getElementById('stTxt');
 
-        function addMessage(user, text, isAI = false) {
+        function addMessage(user, text, type = "") {
             const div = document.createElement('div');
-            div.className = 'msg' + (isAI ? ' ai' : '');
-            div.innerHTML = `<b>${user}:</b> ${text}`;
+            div.className = 'msg ' + type;
+            div.innerHTML = type === 'sys' ? text : `<b>${user}:</b> ${text}`;
             chat.appendChild(div);
             chat.scrollTop = chat.scrollHeight;
         }
@@ -76,7 +76,6 @@
             if (isAI && !document.getElementById('useAI').checked) return;
             if (!isAI && !document.getElementById('useChat').checked) return;
 
-            // ИИ имеет приоритет и прерывает всё
             if (isAI) window.speechSynthesis.cancel();
             else if (window.speechSynthesis.speaking && lastAiSpeech) return;
 
@@ -91,57 +90,50 @@
             try {
                 const r = await fetch(`https://text.pollinations.ai/${encodeURIComponent(q)}?model=openai`);
                 return await r.text();
-            } catch(e) { return "Ошибка нейросети."; }
+            } catch(e) { return "Ошибка ИИ."; }
         }
 
         function connect() {
-            const channel = input.value.trim().toLowerCase();
-            if (!channel) return;
+            if (!currentChannel) return;
 
-            // Активация звука (нужен клик)
-            audioActive = true;
-            window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+            // Сброс старого соединения
+            if (ws) {
+                ws.onclose = null; // Отключаем старый обработчик чтобы не было петли
+                ws.close();
+            }
 
-            if (ws) ws.close();
-
-            // Twitch WebSocket IRC (WSS - защищенный для GitHub)
             ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
 
             ws.onopen = () => {
-                // Анонимный вход
-                const nick = 'justinfan' + Math.floor(Math.random() * 10000);
+                clearTimeout(reconnectTimer); // Останавливаем таймер реконнекта если соединились
+                const nick = 'justinfan' + Math.floor(Math.random() * 99999);
                 ws.send(`PASS SCHMOOPIIE`);
                 ws.send(`NICK ${nick}`);
-                ws.send(`JOIN #${channel}`);
+                ws.send(`JOIN #${currentChannel}`);
                 
                 led.className = 'led on';
-                stTxt.textContent = `ЧАТ: ${channel}`;
-                addMessage('SYSTEM', `Подключено к #${channel}`);
+                stTxt.textContent = `ЧАТ: ${currentChannel}`;
+                addMessage('', `🟢 Подключено к #${currentChannel}`, 'sys');
             };
 
             ws.onmessage = async (event) => {
                 const data = event.data;
-
-                // Ответ на проверку связи (чтобы не выкинуло)
                 if (data.startsWith('PING')) {
                     ws.send('PONG :tmi.twitch.tv');
                     return;
                 }
 
-                // Парсинг сообщения PRIVMSG
-                // Формат: :user!user@user.tmi.twitch.tv PRIVMSG #channel :message
                 const match = data.match(/:(\w+)!.*PRIVMSG #\w+ :(.*)/);
                 if (match) {
                     const user = match[1];
                     const msg = match[2].trim();
-
                     addMessage(user, msg);
 
                     if (msg.toLowerCase().startsWith('!ai')) {
                         const q = msg.slice(3).trim();
                         if (q) {
                             const ans = await fetchAI(q);
-                            addMessage('🤖 AI', ans, true);
+                            addMessage('🤖 AI', ans, 'ai');
                             speak(ans, true);
                         }
                     } else {
@@ -151,20 +143,34 @@
             };
 
             ws.onclose = () => {
-                led.className = 'led';
-                stTxt.textContent = 'ОФЛАЙН';
-                addMessage('SYSTEM', 'Соединение закрыто.');
+                led.className = 'led reconnect';
+                stTxt.textContent = 'РЕКОННЕКТ...';
+                addMessage('', `🟠 Связь потеряна. Повторное подключение через 3 сек...`, 'sys');
+                
+                // Запуск таймера на реконнект
+                clearTimeout(reconnectTimer);
+                reconnectTimer = setTimeout(connect, 3000);
             };
 
             ws.onerror = () => {
-                stTxt.textContent = 'ОШИБКА';
+                ws.close(); // Спровоцирует onclose и реконнект
             };
         }
 
-        btn.addEventListener('click', connect);
-        input.addEventListener('keypress', (e) => e.key === 'Enter' && connect());
+        btn.addEventListener('click', () => {
+            const val = input.value.trim().toLowerCase();
+            if (val) {
+                currentChannel = val;
+                audioActive = true;
+                // Разблокировка TTS
+                window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+                addMessage('', `⏳ Попытка входа в ${val}...`, 'sys');
+                connect();
+            }
+        });
 
-        addMessage('SYSTEM', 'Введите канал и нажмите Подключить');
+        input.addEventListener('keypress', (e) => e.key === 'Enter' && btn.click());
+        addMessage('', 'Система готова. Введите канал.', 'sys');
     })();
 </script>
 

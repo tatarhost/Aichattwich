@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Twitch AI CyberTTS (Auto-Reconnect)</title>
+    <title>Twitch AI CyberTTS (Instant Reconnect)</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
         body { background: #0e0e10; color: #efeff1; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
@@ -15,15 +15,14 @@
         button { background: #9147ff; border: none; color: white; padding: 10px 20px; border-radius: 30px; cursor: pointer; font-weight: bold; transition: 0.2s; }
         button:hover { background: #772ce8; }
         .status { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; background: #232329; padding: 8px 15px; border-radius: 20px; }
-        .led { width: 9px; height: 9px; border-radius: 50%; background: #444; transition: 0.3s; }
+        .led { width: 9px; height: 9px; border-radius: 50%; background: #444; transition: 0.1s; }
         .led.on { background: #00ffcc; box-shadow: 0 0 10px #00ffcc; }
-        .led.reconnect { background: #ffcc00; box-shadow: 0 0 10px #ffcc00; }
+        .led.re { background: #ff3366; box-shadow: 0 0 10px #ff3366; } /* Красный при реконнекте */
         .chat { background: #0a0a0c; height: 380px; border-radius: 15px; padding: 15px; overflow-y: auto; border: 1px solid #2f2f3a; margin: 15px 0; display: flex; flex-direction: column; gap: 8px; }
         .msg { padding: 8px 12px; border-radius: 10px; background: #1f1f23; font-size: 0.95rem; border-left: 3px solid #9147ff; }
         .msg.ai { border-left-color: #00ffcc; background: #141f1e; }
         .msg b { color: #bf94ff; margin-right: 5px; }
-        .msg.sys { font-style: italic; color: #777; border-left: none; background: transparent; padding: 2px 12px; }
-        .opt { display: flex; gap: 20px; font-size: 0.9rem; color: #adadb8; }
+        .msg.sys { font-style: italic; color: #555; border-left: none; background: transparent; font-size: 0.8rem; }
     </style>
 </head>
 <body>
@@ -41,7 +40,7 @@
         </div>
     </div>
 
-    <div class="opt">
+    <div style="display: flex; gap: 20px; font-size: 0.9rem; color: #888; margin-bottom: 10px;">
         <label><input type="checkbox" id="useChat" checked> Чат</label>
         <label><input type="checkbox" id="useAI" checked> ИИ (!ai)</label>
     </div>
@@ -53,9 +52,8 @@
     (function() {
         let ws = null;
         let audioActive = false;
-        let lastAiSpeech = false;
         let currentChannel = "";
-        let reconnectTimer = null;
+        let lastAiSpeech = false;
 
         const btn = document.getElementById('startBtn');
         const input = document.getElementById('chInput');
@@ -69,6 +67,7 @@
             div.innerHTML = type === 'sys' ? text : `<b>${user}:</b> ${text}`;
             chat.appendChild(div);
             chat.scrollTop = chat.scrollHeight;
+            if (chat.childNodes.length > 100) chat.removeChild(chat.firstChild);
         }
 
         function speak(text, isAI = false) {
@@ -96,34 +95,32 @@
         function connect() {
             if (!currentChannel) return;
 
-            // Сброс старого соединения
+            // Полная очистка перед новым входом
             if (ws) {
-                ws.onclose = null; // Отключаем старый обработчик чтобы не было петли
+                ws.onclose = null;
+                ws.onerror = null;
                 ws.close();
             }
 
             ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
 
             ws.onopen = () => {
-                clearTimeout(reconnectTimer); // Останавливаем таймер реконнекта если соединились
-                const nick = 'justinfan' + Math.floor(Math.random() * 99999);
                 ws.send(`PASS SCHMOOPIIE`);
-                ws.send(`NICK ${nick}`);
+                ws.send(`NICK justinfan${Math.floor(Math.random() * 88888)}`);
                 ws.send(`JOIN #${currentChannel}`);
                 
                 led.className = 'led on';
-                stTxt.textContent = `ЧАТ: ${currentChannel}`;
-                addMessage('', `🟢 Подключено к #${currentChannel}`, 'sys');
+                stTxt.textContent = `LIVE: ${currentChannel}`;
+                console.log("Connected to #" + currentChannel);
             };
 
             ws.onmessage = async (event) => {
-                const data = event.data;
-                if (data.startsWith('PING')) {
+                if (event.data.startsWith('PING')) {
                     ws.send('PONG :tmi.twitch.tv');
                     return;
                 }
 
-                const match = data.match(/:(\w+)!.*PRIVMSG #\w+ :(.*)/);
+                const match = event.data.match(/:(\w+)!.*PRIVMSG #\w+ :(.*)/);
                 if (match) {
                     const user = match[1];
                     const msg = match[2].trim();
@@ -143,18 +140,13 @@
             };
 
             ws.onclose = () => {
-                led.className = 'led reconnect';
-                stTxt.textContent = 'РЕКОННЕКТ...';
-                addMessage('', `🟠 Связь потеряна. Повторное подключение через 3 сек...`, 'sys');
-                
-                // Запуск таймера на реконнект
-                clearTimeout(reconnectTimer);
-                reconnectTimer = setTimeout(connect, 3000);
+                led.className = 'led re';
+                stTxt.textContent = 'RECONNECT...';
+                // Моментальный перезапуск через 100мс
+                setTimeout(connect, 100);
             };
 
-            ws.onerror = () => {
-                ws.close(); // Спровоцирует onclose и реконнект
-            };
+            ws.onerror = () => ws.close();
         }
 
         btn.addEventListener('click', () => {
@@ -162,17 +154,14 @@
             if (val) {
                 currentChannel = val;
                 audioActive = true;
-                // Разблокировка TTS
                 window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
-                addMessage('', `⏳ Попытка входа в ${val}...`, 'sys');
+                addMessage('', `⚡ Подключение к #${val}...`, 'sys');
                 connect();
             }
         });
 
         input.addEventListener('keypress', (e) => e.key === 'Enter' && btn.click());
-        addMessage('', 'Система готова. Введите канал.', 'sys');
     })();
 </script>
-
 </body>
 </html>

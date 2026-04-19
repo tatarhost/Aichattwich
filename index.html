@@ -3,15 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NEURO·STREAM v4.5 · Mistral Engine</title>
+    <title>NEURO·STREAM v4.7 · GPT-4o Edition</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@300;400;700&display=swap');
 
         :root {
-            --accent: #bc47ff;
-            --mistral-purple: #ff47eb;
-            --neon-blue: #00d9ff;
-            --error-red: #ff3366;
+            --accent: #007bff;
+            --gpt-blue: #74aa9c; /* Фирменный цвет GPT */
+            --neon-glow: #00f2ff;
             --bg: #030305;
             --glass: rgba(255, 255, 255, 0.03);
             --border: rgba(255, 255, 255, 0.08);
@@ -20,8 +19,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
         body { background: var(--bg); color: #fff; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 15px; overflow-x: hidden; }
 
-        /* Живой фон */
-        .glow-bg { position: absolute; width: 50vw; height: 50vw; background: var(--accent); filter: blur(180px); opacity: 0.12; top: -10%; left: -10%; z-index: -1; }
+        .glow-bg { position: absolute; width: 50vw; height: 50vw; background: var(--accent); filter: blur(180px); opacity: 0.1; top: -10%; left: -10%; z-index: -1; }
 
         .app-shell {
             max-width: 850px;
@@ -35,9 +33,8 @@
         }
 
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
-        .logo { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 1.8rem; letter-spacing: 2px; background: linear-gradient(90deg, #fff, var(--mistral-purple)); -webkit-background-clip: text; color: transparent; }
+        .logo { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 1.8rem; letter-spacing: 2px; background: linear-gradient(90deg, #fff, var(--gpt-blue)); -webkit-background-clip: text; color: transparent; }
 
-        /* Resource Hub */
         .resource-hub {
             display: flex; gap: 12px; margin-bottom: 25px; padding: 12px;
             background: var(--glass); border-radius: 22px; border: 1px solid var(--border);
@@ -46,27 +43,24 @@
             flex: 1; text-align: center; text-decoration: none; color: #fff; font-size: 0.8rem; font-weight: 700;
             padding: 12px; border-radius: 14px; transition: 0.3s;
         }
-        .btn-tg { background: #229ED9; box-shadow: 0 4px 15px rgba(34, 158, 217, 0.3); }
-        .btn-max { background: #ff4500; box-shadow: 0 4px 15px rgba(255, 69, 0, 0.3); }
+        .btn-tg { background: #229ED9; }
+        .btn-max { background: #ff4500; }
         .resource-hub a:hover { transform: translateY(-2px); filter: brightness(1.2); }
 
-        /* Controls */
         .controls { display: flex; gap: 12px; margin-bottom: 20px; }
         input {
             flex: 1; background: rgba(0,0,0,0.6); border: 1px solid var(--border);
             color: #fff; padding: 18px 24px; border-radius: 20px; outline: none; font-size: 1rem;
-            transition: 0.3s;
         }
-        input:focus { border-color: var(--mistral-purple); box-shadow: 0 0 20px rgba(255, 71, 235, 0.1); }
+        input:focus { border-color: var(--gpt-blue); }
         
         .btn-launch {
-            background: linear-gradient(45deg, var(--accent), var(--mistral-purple));
+            background: linear-gradient(45deg, var(--accent), var(--gpt-blue));
             border: none; color: #fff; font-weight: 800;
             padding: 0 45px; border-radius: 20px; cursor: pointer; transition: 0.4s;
         }
-        .btn-launch:hover { transform: scale(1.03); box-shadow: 0 0 40px rgba(188, 71, 255, 0.4); }
+        .btn-launch:hover { transform: scale(1.03); box-shadow: 0 0 40px rgba(0, 123, 255, 0.4); }
 
-        /* Chat area */
         .chat-display {
             background: rgba(0,0,0,0.4); height: 420px; border-radius: 28px;
             padding: 22px; overflow-y: auto; border: 1px solid var(--border);
@@ -78,16 +72,14 @@
             font-size: 0.98rem; line-height: 1.6; border-left: 4px solid var(--accent);
             animation: slideIn 0.3s ease-out;
         }
-        .message.ai { border-left-color: var(--mistral-purple); background: rgba(255, 71, 235, 0.05); }
-        
+        .message.ai { border-left-color: var(--gpt-blue); background: rgba(116, 170, 156, 0.05); }
         .message b { color: var(--accent); margin-right: 10px; }
-        .message.ai b { color: var(--mistral-purple); text-shadow: 0 0 10px rgba(255, 71, 235, 0.3); }
+        .message.ai b { color: var(--gpt-blue); }
 
-        /* Footer */
         .footer { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: #555; }
         .status-pill { display: flex; align-items: center; gap: 8px; background: var(--glass); padding: 7px 18px; border-radius: 100px; border: 1px solid var(--border); }
-        .led { width: 9px; height: 9px; border-radius: 50%; background: #222; transition: 0.3s; }
-        .led.on { background: var(--mistral-purple); box-shadow: 0 0 15px var(--mistral-purple); }
+        .led { width: 9px; height: 9px; border-radius: 50%; background: #222; }
+        .led.on { background: var(--gpt-blue); box-shadow: 0 0 15px var(--gpt-blue); }
 
         @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
@@ -99,7 +91,7 @@
 
 <div class="app-shell">
     <div class="header">
-        <div class="logo">◈ MISTRAL·X</div>
+        <div class="logo">◈ GPT-4o·IRC</div>
         <div class="status-pill">
             <div id="led" class="led"></div>
             <span id="stTxt" style="font-weight: 700;">STANDBY</span>
@@ -107,12 +99,12 @@
     </div>
 
     <div class="resource-hub">
-        <a href="https://t.me/+A9oqctCZC582ZmZl" target="_blank" class="btn-tg">Telegram Channel</a>
-        <a href="https://max.ru/join/CLu9tJrFtmWQMFQ5Q3Yk5IcL_ElITI-dqusm4bsUa6g" target="_blank" class="btn-max">Max.ru Join</a>
+        <a href="https://t.me/+A9oqctCZC582ZmZl" target="_blank" class="btn-tg">Telegram</a>
+        <a href="https://max.ru/join/CLu9tJrFtmWQMFQ5Q3Yk5IcL_ElITI-dqusm4bsUa6g" target="_blank" class="btn-max">Max.ru</a>
     </div>
 
     <div class="controls">
-        <input type="text" id="chInp" placeholder="Название вашего Twitch канала..." spellcheck="false">
+        <input type="text" id="chInp" placeholder="Ник канала Twitch..." spellcheck="false">
         <button id="startBtn" class="btn-launch">СТАРТ</button>
     </div>
 
@@ -120,9 +112,9 @@
 
     <div class="footer">
         <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
-            <input type="checkbox" id="ttsOn" checked style="accent-color: var(--mistral-purple);"> Озвучка активна
+            <input type="checkbox" id="ttsOn" checked> Озвучка активна
         </label>
-        <span>Engine: <b style="color:var(--mistral-purple)">Mistral-X (Zero Key)</b></span>
+        <span>Model: <b style="color:var(--gpt-blue)">GPT-4o (Zero Key)</b></span>
     </div>
 </div>
 
@@ -152,17 +144,21 @@
             const cleanText = text.replace(/(https?:\/\/[^\s]+)/g, 'ссылка').replace(/[^\p{L}\p{N}\s.,!?]/gu, '');
             const utter = new SpeechSynthesisUtterance(cleanText);
             utter.lang = 'ru-RU'; 
-            utter.rate = 1.05; // Чуть быстрее для динамики
+            utter.rate = 1.0;
             lastAI = isAI;
             window.speechSynthesis.speak(utter);
         }
 
         async function fetchAI(q) {
             try {
-                // Используем модель Mistral через Pollinations
-                const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(q)}?model=mistral&system=Ты дерзкий и умный помощник на стриме 2026 года. Твой движок — Mistral-X. Отвечай кратко, саркастично и только на русском.`);
+                // Использование модели GPT-4o через Pollinations (model=openai или model=gpt-4o в зависимости от текущей настройки API)
+                const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(q)}?model=openai&system=Ты продвинутый ИИ GPT-4o. Отвечай кратко, профессионально и только на русском.`);
                 const text = await res.text();
-                return text || "Сигнал потерян...";
+                
+                // Проверка на технический ответ
+                if (text.startsWith('{')) return "Сервис временно недоступен.";
+                
+                return text || "Затрудняюсь ответить...";
             } catch(e) { return "Ошибка нейросети."; }
         }
 
@@ -178,7 +174,7 @@
                 ws.send(`JOIN #${channel}`);
                 led.className = 'led on'; 
                 stTxt.textContent = `LIVE: ${channel.toUpperCase()}`;
-                addMsg('', `📡 Протокол Mistral-X активирован на #${channel}`, 'sys');
+                addMsg('', `📡 Протокол GPT-4o синхронизирован с #${channel}`, 'sys');
             };
 
             ws.onmessage = async (e) => {
@@ -190,9 +186,9 @@
                     if (msg.toLowerCase().startsWith('!ai')) {
                         const q = msg.slice(3).trim();
                         if (q) {
-                            addMsg('🤖 Mistral-X', '⚡ Вычисляю...', 'ai');
+                            addMsg('🤖 GPT-4o', '⚡ Анализ...', 'ai');
                             const ans = await fetchAI(q);
-                            chat.lastChild.innerHTML = `<b>🤖 Mistral-X</b> ${ans}`;
+                            chat.lastChild.innerHTML = `<b>🤖 GPT-4o</b> ${ans}`;
                             speak(ans, true);
                         }
                     } else { speak(msg, false); }
@@ -201,7 +197,7 @@
 
             ws.onclose = () => {
                 led.className = 'led'; stTxt.textContent = 'RECONNECT...';
-                setTimeout(connect, 500);
+                setTimeout(connect, 1000);
             };
         }
 

@@ -2,185 +2,241 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NEURO·STREAM v4.8 · GPT-4o Stable</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>NEURO·STREAM v5.6 · Test Edition</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@300;400;700&display=swap');
 
         :root {
             --accent: #007bff;
             --gpt-blue: #74aa9c;
+            --error-red: #ff3366;
+            --warn-orange: #ff9900;
             --bg: #030305;
             --glass: rgba(255, 255, 255, 0.03);
             --border: rgba(255, 255, 255, 0.08);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
-        body { background: var(--bg); color: #fff; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 15px; overflow-x: hidden; }
+        body { background: var(--bg); color: #fff; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 10px; overflow: hidden; }
+
+        /* СТАРТОВОЕ ОКНО */
+        #welcomeModal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: #000; z-index: 9999; display: flex; 
+            flex-direction: column; justify-content: center; align-items: center; text-align: center;
+        }
+        .modal-btn {
+            background: var(--accent); color: white; border: none; padding: 20px 40px; 
+            border-radius: 50px; font-weight: 800; font-family: 'Orbitron'; cursor: pointer;
+            box-shadow: 0 0 30px var(--accent); transition: 0.3s;
+        }
+
+        /* ПЛАШКА СОВЕТА */
+        #speedPlaque {
+            display: none; position: absolute; top: 10px; left: 10px; right: 10px;
+            background: linear-gradient(90deg, var(--warn-orange), #ff4400);
+            color: black; padding: 12px 15px; border-radius: 12px; z-index: 1000;
+            font-weight: 900; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); font-size: 0.75rem;
+        }
+        #speedPlaque button {
+            background: black; border: none; color: white; cursor: pointer; padding: 4px 10px; border-radius: 6px; margin-top: 5px;
+        }
 
         .app-shell {
             max-width: 850px; width: 100%; background: rgba(10, 10, 15, 0.95);
             backdrop-filter: blur(40px); border: 1px solid var(--border);
-            border-radius: 40px; padding: 35px; box-shadow: 0 50px 120px rgba(0,0,0,0.9);
+            border-radius: 30px; padding: 20px; box-shadow: 0 50px 120px rgba(0,0,0,0.9); position: relative;
         }
 
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
-        .logo { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 1.8rem; background: linear-gradient(90deg, #fff, var(--gpt-blue)); -webkit-background-clip: text; color: transparent; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .logo { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 1.4rem; background: linear-gradient(90deg, #fff, var(--gpt-blue)); -webkit-background-clip: text; color: transparent; }
 
-        .controls { display: flex; gap: 12px; margin-bottom: 20px; }
-        input { flex: 1; background: rgba(0,0,0,0.6); border: 1px solid var(--border); color: #fff; padding: 18px 24px; border-radius: 20px; outline: none; font-size: 1rem; }
+        .controls { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; margin-bottom: 15px; }
+        input { background: rgba(0,0,0,0.6); border: 1px solid var(--border); color: #fff; padding: 12px 15px; border-radius: 15px; outline: none; font-size: 0.9rem; }
         
-        .btn-launch { background: linear-gradient(45deg, var(--accent), var(--gpt-blue)); border: none; color: #fff; font-weight: 800; padding: 0 45px; border-radius: 20px; cursor: pointer; transition: 0.4s; }
-        .btn-launch:hover { transform: scale(1.03); box-shadow: 0 0 40px rgba(0, 123, 255, 0.4); }
+        .btn-launch { background: var(--accent); border: none; color: white; padding: 0 20px; border-radius: 15px; font-weight: 800; cursor: pointer; }
+        .btn-test { background: #28a745; border: none; color: white; padding: 0 15px; border-radius: 15px; font-weight: 800; cursor: pointer; font-size: 0.7rem; }
 
-        .chat-display { background: rgba(0,0,0,0.4); height: 420px; border-radius: 28px; padding: 22px; overflow-y: auto; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; }
+        .sound-management { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .s-btn { 
+            padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);
+            background: #1a1a1e; color: #fff; font-size: 0.7rem; font-weight: 800; cursor: pointer; text-transform: uppercase;
+        }
+        .s-btn.active { background: var(--error-red); }
+        .btn-reset { grid-column: span 2; background: #333; }
 
-        .message { padding: 15px 22px; border-radius: 22px; background: rgba(255,255,255,0.03); font-size: 0.98rem; line-height: 1.6; border-left: 4px solid var(--accent); animation: slideIn 0.3s ease-out; }
+        .chat-display { background: rgba(0,0,0,0.4); height: 320px; border-radius: 20px; padding: 15px; overflow-y: auto; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
+        .message { padding: 10px 15px; border-radius: 15px; background: rgba(255,255,255,0.03); font-size: 0.9rem; line-height: 1.4; border-left: 3px solid var(--accent); }
         .message.ai { border-left-color: var(--gpt-blue); background: rgba(116, 170, 156, 0.05); }
-        .message.err { border-left-color: #ff3366; background: rgba(255, 51, 102, 0.05); color: #ffb3b3; }
-        .message b { color: var(--accent); margin-right: 10px; }
-        .message.ai b { color: var(--gpt-blue); }
 
-        .footer { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: #555; }
-        .status-pill { display: flex; align-items: center; gap: 8px; background: var(--glass); padding: 7px 18px; border-radius: 100px; border: 1px solid var(--border); }
-        .led { width: 9px; height: 9px; border-radius: 50%; background: #222; }
-        .led.on { background: var(--gpt-blue); box-shadow: 0 0 15px var(--gpt-blue); }
-
-        @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+        .status-pill { display: flex; align-items: center; gap: 8px; font-size: 0.7rem; }
+        .led { width: 8px; height: 8px; border-radius: 50%; background: #444; }
+        .led.on { background: var(--gpt-blue); box-shadow: 0 0 10px var(--gpt-blue); }
+        .led.re { background: var(--error-red); box-shadow: 0 0 10px var(--error-red); }
     </style>
 </head>
 <body>
 
+<div id="welcomeModal">
+    <h1 style="font-family:'Orbitron'; color:var(--gpt-blue); margin-bottom: 20px;">NEURO·STREAM v5.6</h1>
+    <button class="modal-btn" onclick="initApp()">АКТИВИРОВАТЬ</button>
+</div>
+
+<div id="speedPlaque">
+    ⚠️ СЛИШКОМ БЫСТРЫЙ ЧАТ! ЛУЧШЕ ЗАМУТИТЬ ЧАТ, ЧТОБЫ ИИ НЕ ТОРМОЗИЛ.<br>
+    <button onclick="closePlaque()">ЗАКРЫТЬ УВЕДОМЛЕНИЕ [X]</button>
+</div>
+
 <div class="app-shell">
     <div class="header">
-        <div class="logo">◈ GPT-4o·FIX</div>
+        <div class="logo">◈ NEURO·IRC</div>
         <div class="status-pill">
             <div id="led" class="led"></div>
-            <span id="stTxt" style="font-weight: 700;">READY</span>
+            <span id="stTxt">ОФЛАЙН</span>
         </div>
     </div>
 
     <div class="controls">
-        <input type="text" id="chInp" placeholder="Ник канала Twitch..." spellcheck="false">
-        <button id="startBtn" class="btn-launch">СТАРТ</button>
+        <input type="text" id="chInp" placeholder="Канал Twitch..." spellcheck="false">
+        <button id="startBtn" class="btn-launch" onclick="startTwitch()">СТАРТ</button>
+        <button class="btn-test" onclick="runTest()">ТЕСТ ИИ</button>
+    </div>
+
+    <div class="sound-management">
+        <button class="s-btn" id="muteChatBtn" onclick="toggleMute('chat')">МУТ ЧАТА: ВЫКЛ</button>
+        <button class="s-btn" id="muteAIBtn" onclick="toggleMute('ai')">МУТ ИИ: ВЫКЛ</button>
+        <button class="s-btn btn-reset" onclick="stopSpeechNow()">🚫 ЗАТКНУТЬ ВСЕХ</button>
     </div>
 
     <div id="chatBox" class="chat-display"></div>
 
-    <div class="footer">
-        <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
-            <input type="checkbox" id="ttsOn" checked> Озвучка активна
-        </label>
-        <span>Model: <b style="color:var(--gpt-blue)">GPT-4o Stable</b></span>
-    </div>
+    <div style="font-size: 0.6rem; color: #444; text-align: center;">GPT-4o Stable · 50 Words Limit · No Code</div>
 </div>
 
 <script>
-    (function() {
-        let ws = null, audio = false, channel = "", lastAI = false;
-        const btn = document.getElementById('startBtn'),
-              chInp = document.getElementById('chInp'),
-              chat = document.getElementById('chatBox'),
-              led = document.getElementById('led'),
-              stTxt = document.getElementById('stTxt');
+    let ws = null, audio = false, channel = "", lastAI = false;
+    let chatMuted = false, aiMuted = false;
+    let msgCount = 0;
 
-        function addMsg(user, text, type = "") {
-            const div = document.createElement('div');
-            div.className = 'message ' + type;
-            div.innerHTML = type === 'sys' ? text : `<b>${user}</b> ${text}`;
-            chat.appendChild(div);
-            chat.scrollTop = chat.scrollHeight;
-            if (chat.childNodes.length > 50) chat.removeChild(chat.firstChild);
+    function initApp() {
+        audio = true;
+        document.getElementById('welcomeModal').style.display = 'none';
+        window.speechSynthesis.cancel();
+        addMsg('SYSTEM', 'Аудио-модуль активирован. Можно работать.', 'sys');
+    }
+
+    function closePlaque() { document.getElementById('speedPlaque').style.display = 'none'; }
+    function stopSpeechNow() { window.speechSynthesis.cancel(); }
+
+    function toggleMute(target) {
+        if(target === 'chat') {
+            chatMuted = !chatMuted;
+            document.getElementById('muteChatBtn').textContent = `МУТ ЧАТА: ${chatMuted ? 'ВКЛ' : 'ВЫКЛ'}`;
+            document.getElementById('muteChatBtn').classList.toggle('active', chatMuted);
+        } else {
+            aiMuted = !aiMuted;
+            document.getElementById('muteAIBtn').textContent = `МУТ ИИ: ${aiMuted ? 'ВКЛ' : 'ВЫКЛ'}`;
+            document.getElementById('muteAIBtn').classList.toggle('active', aiMuted);
         }
+        window.speechSynthesis.cancel();
+    }
 
-        function speak(text, isAI = false) {
-            if (!audio || !document.getElementById('ttsOn').checked) return;
-            if (isAI) window.speechSynthesis.cancel();
-            else if (window.speechSynthesis.speaking && lastAI) return;
-            const utter = new SpeechSynthesisUtterance(text.replace(/(https?:\/\/[^\s]+)/g, '').replace(/[^\p{L}\p{N}\s.,!?]/gu, ''));
-            utter.lang = 'ru-RU'; lastAI = isAI;
-            window.speechSynthesis.speak(utter);
-        }
+    function addMsg(user, text, type = "") {
+        const div = document.createElement('div');
+        div.className = 'message ' + type;
+        div.innerHTML = type === 'sys' ? text : `<b>${user}</b> ${text}`;
+        const chatBox = document.getElementById('chatBox');
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+        if (chatBox.childNodes.length > 30) chatBox.removeChild(chatBox.firstChild);
+        msgCount++;
+    }
 
-        async function fetchAI(q) {
-            // Создаем контроллер для отмены запроса через 15 секунд
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000);
+    setInterval(() => {
+        if (msgCount > 6) document.getElementById('speedPlaque').style.display = 'block';
+        msgCount = 0;
+    }, 3000);
 
-            try {
-                // Добавляем случайный seed для обхода кэша и ускорения ответа
-                const seed = Math.floor(Math.random() * 1000000);
-                const url = `https://text.pollinations.ai/${encodeURIComponent(q)}?model=openai&system=Кратко_на_русском&seed=${seed}`;
-                
-                const res = await fetch(url, { signal: controller.signal });
-                clearTimeout(timeoutId);
+    function speak(text, isAI = false) {
+        if (!audio) return;
+        if (isAI && aiMuted) return;
+        if (!isAI && chatMuted) return;
+        if (isAI) window.speechSynthesis.cancel();
+        else if (window.speechSynthesis.speaking && lastAI) return;
 
-                if (!res.ok) throw new Error("Server Error");
-                
-                const text = await res.text();
-                if (text.startsWith('{')) return "Ошибка формата данных сервера.";
-                return text.trim() || "ИИ не смог сформулировать ответ.";
+        const words = text.split(' ');
+        const limitedText = words.length > 50 ? words.slice(0, 50).join(' ') + "..." : text;
+        const utter = new SpeechSynthesisUtterance(limitedText.replace(/(https?:\/\/[^\s]+)/g, '').replace(/[^\p{L}\p{N}\s.,!?]/gu, ''));
+        utter.lang = 'ru-RU'; lastAI = isAI;
+        window.speechSynthesis.speak(utter);
+    }
 
-            } catch(e) {
-                if (e.name === 'AbortError') return "Тайм-аут: сервер ИИ слишком долго не отвечал.";
-                return "Ошибка связи с нейросетью. Попробуйте еще раз.";
+    async function fetchAI(q) {
+        try {
+            const seed = Math.floor(Math.random() * 9999);
+            const sys = "Ты_краткий_помощник_на_стриме.Ответ_до_50_слов.БЕЗ_КОДА.Только_на_русском.";
+            const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(q)}?model=openai&system=${sys}&seed=${seed}`);
+            let text = await res.text();
+            if (text.includes("```") || text.includes("function")) return "Я не пишу код, только общаюсь!";
+            return text.trim();
+        } catch(e) { return "Ошибка ИИ."; }
+    }
+
+    // ТЕСТОВАЯ ФУНКЦИЯ ДЛЯ ПРОВЕРКИ БЕЗ ТВИТЧА
+    async function runTest() {
+        if(!audio) return alert("Сначала нажми АКТИВИРОВАТЬ!");
+        const testQ = "Привет, как дела? Расскажи шутку!";
+        addMsg('TEST_USER', testQ);
+        speak(testQ, false);
+        addMsg('🤖 AI', '⚡ Обработка...', 'ai');
+        const ans = await fetchAI(testQ);
+        document.getElementById('chatBox').lastChild.innerHTML = `<b>🤖 AI</b> ${ans}`;
+        speak(ans, true);
+    }
+
+    function startTwitch() {
+        const val = document.getElementById('chInp').value.trim().toLowerCase();
+        if (!val) return alert("Введите ник канала!");
+        channel = val;
+        connect();
+    }
+
+    function connect() {
+        if (ws) { ws.onclose = null; ws.close(); }
+        ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
+        ws.onopen = () => {
+            ws.send(`PASS SCHMOOPIIE`);
+            ws.send(`NICK justinfan${Math.floor(Math.random() * 9999)}`);
+            ws.send(`JOIN #${channel}`);
+            document.getElementById('led').className = 'led on';
+            document.getElementById('stTxt').textContent = `LIVE: ${channel.toUpperCase()}`;
+            addMsg('', `📡 Синхронизация с #${channel} установлена`, 'sys');
+        };
+        ws.onmessage = async (e) => {
+            if (e.data.startsWith('PING')) { ws.send('PONG :tmi.twitch.tv'); return; }
+            const m = e.data.match(/:(\w+)!.*PRIVMSG #\w+ :(.*)/);
+            if (m) {
+                const u = m[1], msg = m[2].trim();
+                addMsg(u, msg);
+                if (msg.toLowerCase().startsWith('!ai')) {
+                    const q = msg.slice(3).trim();
+                    if (q) {
+                        addMsg('🤖 AI', '⚡ Обработка...', 'ai');
+                        const ans = await fetchAI(q);
+                        document.getElementById('chatBox').lastChild.innerHTML = `<b>🤖 AI</b> ${ans}`;
+                        speak(ans, true);
+                    }
+                } else { speak(msg, false); }
             }
-        }
-
-        function connect() {
-            if (!channel) return;
-            if (ws) { ws.onclose = null; ws.close(); }
-            ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
-
-            ws.onopen = () => {
-                ws.send(`PASS SCHMOOPIIE`);
-                ws.send(`NICK justinfan${Math.floor(Math.random() * 99999)}`);
-                ws.send(`JOIN #${channel}`);
-                led.className = 'led on'; 
-                stTxt.textContent = `LIVE: ${channel.toUpperCase()}`;
-                addMsg('', `📡 Протокол GPT-4o запущен для #${channel}`, 'sys');
-            };
-
-            ws.onmessage = async (e) => {
-                if (e.data.startsWith('PING')) { ws.send('PONG :tmi.twitch.tv'); return; }
-                const m = e.data.match(/:(\w+)!.*PRIVMSG #\w+ :(.*)/);
-                if (m) {
-                    const u = m[1], msg = m[2].trim();
-                    addMsg(u, msg);
-                    if (msg.toLowerCase().startsWith('!ai')) {
-                        const q = msg.slice(3).trim();
-                        if (q) {
-                            addMsg('🤖 GPT-4o', '⚡ Анализ...', 'ai');
-                            const ans = await fetchAI(q);
-                            
-                            // Проверяем, не возникла ли ошибка
-                            const isErr = ans.includes("Ошибка") || ans.includes("Тайм-аут");
-                            chat.lastChild.className = "message " + (isErr ? "err" : "ai");
-                            chat.lastChild.innerHTML = `<b>🤖 GPT-4o</b> ${ans}`;
-                            
-                            if (!isErr) speak(ans, true);
-                        }
-                    } else { speak(msg, false); }
-                }
-            };
-
-            ws.onclose = () => {
-                led.className = 'led'; stTxt.textContent = 'RECONNECT...';
-                setTimeout(connect, 1000);
-            };
-        }
-
-        btn.addEventListener('click', () => {
-            const ch = chInp.value.trim().toLowerCase();
-            if (ch) {
-                channel = ch; audio = true;
-                window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
-                connect();
-            }
-        });
-        chInp.addEventListener('keypress', (e) => e.key === 'Enter' && btn.click());
-    })();
+        };
+        ws.onclose = () => {
+            window.speechSynthesis.cancel();
+            document.getElementById('led').className = 'led re';
+            document.getElementById('stTxt').textContent = 'RECONNECT...';
+            setTimeout(connect, 1500);
+        };
+    }
 </script>
 </body>
 </html>

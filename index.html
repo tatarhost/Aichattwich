@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NEURO·STREAM v4.7 · GPT-4o Edition</title>
+    <title>NEURO·STREAM v4.8 · GPT-4o Stable</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@300;400;700&display=swap');
 
         :root {
             --accent: #007bff;
-            --gpt-blue: #74aa9c; /* Фирменный цвет GPT */
-            --neon-glow: #00f2ff;
+            --gpt-blue: #74aa9c;
             --bg: #030305;
             --glass: rgba(255, 255, 255, 0.03);
             --border: rgba(255, 255, 255, 0.08);
@@ -19,60 +18,26 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
         body { background: var(--bg); color: #fff; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 15px; overflow-x: hidden; }
 
-        .glow-bg { position: absolute; width: 50vw; height: 50vw; background: var(--accent); filter: blur(180px); opacity: 0.1; top: -10%; left: -10%; z-index: -1; }
-
         .app-shell {
-            max-width: 850px;
-            width: 100%;
-            background: rgba(10, 10, 15, 0.95);
-            backdrop-filter: blur(40px);
-            border: 1px solid var(--border);
-            border-radius: 40px;
-            padding: 35px;
-            box-shadow: 0 50px 120px rgba(0,0,0,0.9);
+            max-width: 850px; width: 100%; background: rgba(10, 10, 15, 0.95);
+            backdrop-filter: blur(40px); border: 1px solid var(--border);
+            border-radius: 40px; padding: 35px; box-shadow: 0 50px 120px rgba(0,0,0,0.9);
         }
 
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
-        .logo { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 1.8rem; letter-spacing: 2px; background: linear-gradient(90deg, #fff, var(--gpt-blue)); -webkit-background-clip: text; color: transparent; }
-
-        .resource-hub {
-            display: flex; gap: 12px; margin-bottom: 25px; padding: 12px;
-            background: var(--glass); border-radius: 22px; border: 1px solid var(--border);
-        }
-        .resource-hub a {
-            flex: 1; text-align: center; text-decoration: none; color: #fff; font-size: 0.8rem; font-weight: 700;
-            padding: 12px; border-radius: 14px; transition: 0.3s;
-        }
-        .btn-tg { background: #229ED9; }
-        .btn-max { background: #ff4500; }
-        .resource-hub a:hover { transform: translateY(-2px); filter: brightness(1.2); }
+        .logo { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 1.8rem; background: linear-gradient(90deg, #fff, var(--gpt-blue)); -webkit-background-clip: text; color: transparent; }
 
         .controls { display: flex; gap: 12px; margin-bottom: 20px; }
-        input {
-            flex: 1; background: rgba(0,0,0,0.6); border: 1px solid var(--border);
-            color: #fff; padding: 18px 24px; border-radius: 20px; outline: none; font-size: 1rem;
-        }
-        input:focus { border-color: var(--gpt-blue); }
+        input { flex: 1; background: rgba(0,0,0,0.6); border: 1px solid var(--border); color: #fff; padding: 18px 24px; border-radius: 20px; outline: none; font-size: 1rem; }
         
-        .btn-launch {
-            background: linear-gradient(45deg, var(--accent), var(--gpt-blue));
-            border: none; color: #fff; font-weight: 800;
-            padding: 0 45px; border-radius: 20px; cursor: pointer; transition: 0.4s;
-        }
+        .btn-launch { background: linear-gradient(45deg, var(--accent), var(--gpt-blue)); border: none; color: #fff; font-weight: 800; padding: 0 45px; border-radius: 20px; cursor: pointer; transition: 0.4s; }
         .btn-launch:hover { transform: scale(1.03); box-shadow: 0 0 40px rgba(0, 123, 255, 0.4); }
 
-        .chat-display {
-            background: rgba(0,0,0,0.4); height: 420px; border-radius: 28px;
-            padding: 22px; overflow-y: auto; border: 1px solid var(--border);
-            display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;
-        }
+        .chat-display { background: rgba(0,0,0,0.4); height: 420px; border-radius: 28px; padding: 22px; overflow-y: auto; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; }
 
-        .message {
-            padding: 15px 22px; border-radius: 22px; background: rgba(255,255,255,0.03);
-            font-size: 0.98rem; line-height: 1.6; border-left: 4px solid var(--accent);
-            animation: slideIn 0.3s ease-out;
-        }
+        .message { padding: 15px 22px; border-radius: 22px; background: rgba(255,255,255,0.03); font-size: 0.98rem; line-height: 1.6; border-left: 4px solid var(--accent); animation: slideIn 0.3s ease-out; }
         .message.ai { border-left-color: var(--gpt-blue); background: rgba(116, 170, 156, 0.05); }
+        .message.err { border-left-color: #ff3366; background: rgba(255, 51, 102, 0.05); color: #ffb3b3; }
         .message b { color: var(--accent); margin-right: 10px; }
         .message.ai b { color: var(--gpt-blue); }
 
@@ -87,20 +52,13 @@
 </head>
 <body>
 
-<div class="glow-bg"></div>
-
 <div class="app-shell">
     <div class="header">
-        <div class="logo">◈ GPT-4o·IRC</div>
+        <div class="logo">◈ GPT-4o·FIX</div>
         <div class="status-pill">
             <div id="led" class="led"></div>
-            <span id="stTxt" style="font-weight: 700;">STANDBY</span>
+            <span id="stTxt" style="font-weight: 700;">READY</span>
         </div>
-    </div>
-
-    <div class="resource-hub">
-        <a href="https://t.me/+A9oqctCZC582ZmZl" target="_blank" class="btn-tg">Telegram</a>
-        <a href="https://max.ru/join/CLu9tJrFtmWQMFQ5Q3Yk5IcL_ElITI-dqusm4bsUa6g" target="_blank" class="btn-max">Max.ru</a>
     </div>
 
     <div class="controls">
@@ -114,7 +72,7 @@
         <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
             <input type="checkbox" id="ttsOn" checked> Озвучка активна
         </label>
-        <span>Model: <b style="color:var(--gpt-blue)">GPT-4o (Zero Key)</b></span>
+        <span>Model: <b style="color:var(--gpt-blue)">GPT-4o Stable</b></span>
     </div>
 </div>
 
@@ -140,32 +98,39 @@
             if (!audio || !document.getElementById('ttsOn').checked) return;
             if (isAI) window.speechSynthesis.cancel();
             else if (window.speechSynthesis.speaking && lastAI) return;
-            
-            const cleanText = text.replace(/(https?:\/\/[^\s]+)/g, 'ссылка').replace(/[^\p{L}\p{N}\s.,!?]/gu, '');
-            const utter = new SpeechSynthesisUtterance(cleanText);
-            utter.lang = 'ru-RU'; 
-            utter.rate = 1.0;
-            lastAI = isAI;
+            const utter = new SpeechSynthesisUtterance(text.replace(/(https?:\/\/[^\s]+)/g, '').replace(/[^\p{L}\p{N}\s.,!?]/gu, ''));
+            utter.lang = 'ru-RU'; lastAI = isAI;
             window.speechSynthesis.speak(utter);
         }
 
         async function fetchAI(q) {
+            // Создаем контроллер для отмены запроса через 15 секунд
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
+
             try {
-                // Использование модели GPT-4o через Pollinations (model=openai или model=gpt-4o в зависимости от текущей настройки API)
-                const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(q)}?model=openai&system=Ты продвинутый ИИ GPT-4o. Отвечай кратко, профессионально и только на русском.`);
+                // Добавляем случайный seed для обхода кэша и ускорения ответа
+                const seed = Math.floor(Math.random() * 1000000);
+                const url = `https://text.pollinations.ai/${encodeURIComponent(q)}?model=openai&system=Кратко_на_русском&seed=${seed}`;
+                
+                const res = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeoutId);
+
+                if (!res.ok) throw new Error("Server Error");
+                
                 const text = await res.text();
-                
-                // Проверка на технический ответ
-                if (text.startsWith('{')) return "Сервис временно недоступен.";
-                
-                return text || "Затрудняюсь ответить...";
-            } catch(e) { return "Ошибка нейросети."; }
+                if (text.startsWith('{')) return "Ошибка формата данных сервера.";
+                return text.trim() || "ИИ не смог сформулировать ответ.";
+
+            } catch(e) {
+                if (e.name === 'AbortError') return "Тайм-аут: сервер ИИ слишком долго не отвечал.";
+                return "Ошибка связи с нейросетью. Попробуйте еще раз.";
+            }
         }
 
         function connect() {
             if (!channel) return;
             if (ws) { ws.onclose = null; ws.close(); }
-            
             ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
 
             ws.onopen = () => {
@@ -174,7 +139,7 @@
                 ws.send(`JOIN #${channel}`);
                 led.className = 'led on'; 
                 stTxt.textContent = `LIVE: ${channel.toUpperCase()}`;
-                addMsg('', `📡 Протокол GPT-4o синхронизирован с #${channel}`, 'sys');
+                addMsg('', `📡 Протокол GPT-4o запущен для #${channel}`, 'sys');
             };
 
             ws.onmessage = async (e) => {
@@ -188,8 +153,13 @@
                         if (q) {
                             addMsg('🤖 GPT-4o', '⚡ Анализ...', 'ai');
                             const ans = await fetchAI(q);
+                            
+                            // Проверяем, не возникла ли ошибка
+                            const isErr = ans.includes("Ошибка") || ans.includes("Тайм-аут");
+                            chat.lastChild.className = "message " + (isErr ? "err" : "ai");
                             chat.lastChild.innerHTML = `<b>🤖 GPT-4o</b> ${ans}`;
-                            speak(ans, true);
+                            
+                            if (!isErr) speak(ans, true);
                         }
                     } else { speak(msg, false); }
                 }
@@ -207,9 +177,8 @@
                 channel = ch; audio = true;
                 window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
                 connect();
-            } else { alert("Введите название канала!"); }
+            }
         });
-
         chInp.addEventListener('keypress', (e) => e.key === 'Enter' && btn.click());
     })();
 </script>

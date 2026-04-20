@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>NEURO·STREAM v5.8 · Stable AI</title>
+    <title>NEURO·STREAM v5.8 · Final Stability</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@300;400;700&display=swap');
 
@@ -65,9 +65,9 @@
 
         .chat-display { background: rgba(0,0,0,0.4); height: 320px; border-radius: 20px; padding: 15px; overflow-y: auto; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
         .message { padding: 10px 15px; border-radius: 15px; background: rgba(255,255,255,0.03); font-size: 0.85rem; line-height: 1.4; border-left: 3px solid var(--accent); }
-        .message.ai { border-left-color: var(--gpt-blue); background: rgba(116, 170, 156, 0.1); }
+        .message.ai { border-left-color: var(--gpt-blue); background: rgba(116, 170, 156, 0.08); }
         .message.err { border-left-color: var(--error-red); color: #ffb3b3; font-size: 0.75rem; }
-        .message.sys { border-left: none; color: #888; font-size: 0.7rem; text-align: center; }
+        .message.sys { border-left: none; color: #666; font-size: 0.7rem; text-align: center; }
 
         .status-pill { display: flex; align-items: center; gap: 6px; font-size: 0.65rem; color: #666; }
         .led { width: 8px; height: 8px; border-radius: 50%; background: #444; }
@@ -85,7 +85,7 @@
 </div>
 
 <div id="speedPlaque">
-    ⚠️ СЛИШКОМ БЫСТРЫЙ ЧАТ! РЕКОМЕНДУЕТСЯ МУТ ЧАТА ДЛЯ СТАБИЛЬНОСТИ ИИ.<br>
+    ⚠️ СЛИШКОМ БЫСТРЫЙ ЧАТ! ИИ МОЖЕТ ТОРМОЗИТЬ. РЕКОМЕНДУЕТСЯ МУТ ЧАТА.<br>
     <button onclick="closePlaque()">ЗАКРЫТЬ [X]</button>
 </div>
 
@@ -112,7 +112,7 @@
     <div id="chatBox" class="chat-display"></div>
 
     <div style="font-size: 0.55rem; color: #333; text-align: center; text-transform: uppercase;">
-        Powered by GPT-4o · Pollinations AI · No Code Policy
+        Powered by GPT-4o & Multi-Model Fallback · No Code Policy
     </div>
 </div>
 
@@ -124,9 +124,7 @@
     function initApp() {
         audioEnabled = true;
         document.getElementById('welcomeModal').style.display = 'none';
-        // Фиктивный звук для активации API в браузере
-        const s = new SpeechSynthesisUtterance("");
-        window.speechSynthesis.speak(s);
+        window.speechSynthesis.speak(new SpeechSynthesisUtterance(""));
     }
 
     function closePlaque() { document.getElementById('speedPlaque').style.display = 'none'; }
@@ -152,56 +150,53 @@
         const chatBox = document.getElementById('chatBox');
         chatBox.appendChild(div);
         chatBox.scrollTop = chatBox.scrollHeight;
-        
-        if (chatBox.childNodes.length > 30) chatBox.removeChild(chatBox.firstChild);
+        if (chatBox.childNodes.length > 35) chatBox.removeChild(chatBox.firstChild);
         msgCount++;
-        return div; // Возвращаем элемент для последующего редактирования (важно для ИИ)
+        return div;
     }
 
-    // Детектор флуда
     setInterval(() => {
-        if (msgCount > 7) document.getElementById('speedPlaque').style.display = 'block';
+        if (msgCount > 10) document.getElementById('speedPlaque').style.display = 'block';
         msgCount = 0;
-    }, 4000);
+    }, 5000);
 
     function speak(text, isAI = false) {
-        if (!audioEnabled) return;
-        if (isAI && aiMuted) return;
-        if (!isAI && chatMuted) return;
-
-        // ИИ имеет приоритет и прерывает всё
+        if (!audioEnabled || (isAI && aiMuted) || (!isAI && chatMuted)) return;
+        
         if (isAI) window.speechSynthesis.cancel();
         else if (window.speechSynthesis.speaking) return; 
 
         const cleanText = text.replace(/(https?:\/\/[^\s]+)/g, '').replace(/[^\p{L}\p{N}\s.,!?]/gu, '');
         const utter = new SpeechSynthesisUtterance(cleanText);
         utter.lang = 'ru-RU';
-        utter.rate = 1.0;
+        utter.rate = 1.05;
         window.speechSynthesis.speak(utter);
     }
 
+    // Улучшенная функция запроса с обходом ошибки 502 (Bad Gateway)
     async function fetchAI(query) {
-        try {
-            const seed = Math.floor(Math.random() * 1000000);
-            const systemPrompt = "Ты - веселый ИИ стример. Отвечай кратко (до 40 слов), дерзко, на русском языке. Никакого кода.";
-            
-            const url = `https://text.pollinations.ai/${encodeURIComponent(query)}?model=openai&system=${encodeURIComponent(systemPrompt)}&seed=${seed}`;
-            
-            const response = await fetch(url);
-            if (!response.ok) throw new Error(`Ошибка API: ${response.status}`);
-            
-            const result = await response.text();
-            
-            // Защита от выдачи кода
-            if (result.includes("```") || result.includes("function") || result.includes("const ")) {
-                return "Я не пишу код, я здесь для общения!";
+        const models = ['openai', 'mistral', 'p1']; 
+        const seed = Math.floor(Math.random() * 999999);
+        const sysPrompt = encodeURIComponent("Ты - дерзкий нейро-стример. Отвечай кратко, до 30 слов, на русском. Без кода.");
+
+        for (let model of models) {
+            try {
+                const url = `https://text.pollinations.ai/${encodeURIComponent(query)}?model=${model}&system=${sysPrompt}&seed=${seed}`;
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 сек таймаут
+
+                const response = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeoutId);
+
+                if (response.ok) {
+                    const result = await response.text();
+                    if (result && result.length > 2) return result.trim();
+                }
+            } catch (e) {
+                console.warn(`Модель ${model} недоступна, пробуем следующую...`);
             }
-            
-            return result.trim() || "Не знаю что ответить на это...";
-        } catch (e) {
-            console.error(e);
-            return `Сбой нейросети: ${e.message}`;
         }
+        return "Все системы ИИ перегружены. Попробуй позже!";
     }
 
     function startTwitch() {
@@ -213,7 +208,6 @@
 
     function connect() {
         if (ws) { ws.onclose = null; ws.close(); }
-        
         ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
 
         ws.onopen = () => {
@@ -222,7 +216,7 @@
             ws.send(`JOIN #${channel}`);
             document.getElementById('led').className = 'led on';
             document.getElementById('stTxt').textContent = `LIVE: ${channel.toUpperCase()}`;
-            addMsg('', `🟢 Подключено к каналу #${channel}`, 'sys');
+            addMsg('', `🟢 Связь установлена с #${channel}`, 'sys');
         };
 
         ws.onmessage = async (e) => {
@@ -234,37 +228,31 @@
             const match = e.data.match(/:(\w+)!.*PRIVMSG #\w+ :(.*)/);
             if (match) {
                 const user = match[1];
-                const message = match[2].trim();
+                const msg = match[2].trim();
 
-                if (message.toLowerCase().startsWith('!ai')) {
-                    const question = message.slice(3).trim();
-                    if (question) {
-                        // Создаем временное сообщение и сохраняем ссылку на него
-                        const aiElement = addMsg('🤖 AI', '⚡ Обрабатываю запрос...', 'ai');
+                if (msg.toLowerCase().startsWith('!ai')) {
+                    const q = msg.slice(3).trim();
+                    if (q) {
+                        const aiEl = addMsg('🤖 AI', '⚡ Мышление...', 'ai');
+                        const ans = await fetchAI(q);
                         
-                        const answer = await fetchAI(question);
-                        
-                        // Обновляем текст именно в том сообщении, которое создали
-                        if (answer.startsWith("Сбой")) {
-                            aiElement.className = "message err";
-                        }
-                        aiElement.innerHTML = `<b>🤖 AI:</b> ${answer}`;
-                        speak(answer, true);
+                        if (ans.includes("перегружены")) aiEl.className = "message err";
+                        aiEl.innerHTML = `<b>🤖 AI:</b> ${ans}`;
+                        speak(ans, true);
                     }
                 } else {
-                    addMsg(user, message);
-                    speak(`${user} говорит: ${message}`, false);
+                    addMsg(user, msg);
+                    speak(`${user} говорит: ${msg}`, false);
                 }
             }
         };
 
         ws.onclose = () => {
             document.getElementById('led').className = 'led re';
-            document.getElementById('stTxt').textContent = 'ПЕРЕПОДКЛЮЧЕНИЕ...';
+            document.getElementById('stTxt').textContent = 'RECONNECT...';
             setTimeout(connect, 3000);
         };
     }
 </script>
-
 </body>
 </html>

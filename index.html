@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>NEURO·STREAM v5.8 · Final Stability</title>
+    <title>NEURO·STREAM v5.8 · Stable AI</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@300;400;700&display=swap');
 
@@ -65,8 +65,9 @@
 
         .chat-display { background: rgba(0,0,0,0.4); height: 320px; border-radius: 20px; padding: 15px; overflow-y: auto; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
         .message { padding: 10px 15px; border-radius: 15px; background: rgba(255,255,255,0.03); font-size: 0.85rem; line-height: 1.4; border-left: 3px solid var(--accent); }
-        .message.ai { border-left-color: var(--gpt-blue); background: rgba(116, 170, 156, 0.05); }
+        .message.ai { border-left-color: var(--gpt-blue); background: rgba(116, 170, 156, 0.1); }
         .message.err { border-left-color: var(--error-red); color: #ffb3b3; font-size: 0.75rem; }
+        .message.sys { border-left: none; color: #888; font-size: 0.7rem; text-align: center; }
 
         .status-pill { display: flex; align-items: center; gap: 6px; font-size: 0.65rem; color: #666; }
         .led { width: 8px; height: 8px; border-radius: 50%; background: #444; }
@@ -84,7 +85,7 @@
 </div>
 
 <div id="speedPlaque">
-    ⚠️ СЛИШКОМ БЫСТРЫЙ ЧАТ! ЛУЧШЕ ЗАМУТИТЬ ЧАТ, ЧТОБЫ ИИ НЕ ТОРМОЗИЛ.<br>
+    ⚠️ СЛИШКОМ БЫСТРЫЙ ЧАТ! РЕКОМЕНДУЕТСЯ МУТ ЧАТА ДЛЯ СТАБИЛЬНОСТИ ИИ.<br>
     <button onclick="closePlaque()">ЗАКРЫТЬ [X]</button>
 </div>
 
@@ -111,19 +112,21 @@
     <div id="chatBox" class="chat-display"></div>
 
     <div style="font-size: 0.55rem; color: #333; text-align: center; text-transform: uppercase;">
-        Powered by GPT-4o · 50 Words Limit · No Code Policy
+        Powered by GPT-4o · Pollinations AI · No Code Policy
     </div>
 </div>
 
 <script>
-    let ws = null, audio = false, channel = "", lastAI = false;
+    let ws = null, audioEnabled = false, channel = "";
     let chatMuted = false, aiMuted = false;
     let msgCount = 0;
 
     function initApp() {
-        audio = true;
+        audioEnabled = true;
         document.getElementById('welcomeModal').style.display = 'none';
-        window.speechSynthesis.cancel();
+        // Фиктивный звук для активации API в браузере
+        const s = new SpeechSynthesisUtterance("");
+        window.speechSynthesis.speak(s);
     }
 
     function closePlaque() { document.getElementById('speedPlaque').style.display = 'none'; }
@@ -145,50 +148,59 @@
     function addMsg(user, text, type = "") {
         const div = document.createElement('div');
         div.className = 'message ' + type;
-        div.innerHTML = type === 'sys' ? text : `<b>${user}</b> ${text}`;
+        div.innerHTML = type === 'sys' ? text : `<b>${user}:</b> ${text}`;
         const chatBox = document.getElementById('chatBox');
         chatBox.appendChild(div);
         chatBox.scrollTop = chatBox.scrollHeight;
-        if (chatBox.childNodes.length > 25) chatBox.removeChild(chatBox.firstChild);
+        
+        if (chatBox.childNodes.length > 30) chatBox.removeChild(chatBox.firstChild);
         msgCount++;
+        return div; // Возвращаем элемент для последующего редактирования (важно для ИИ)
     }
 
+    // Детектор флуда
     setInterval(() => {
-        if (msgCount > 6) document.getElementById('speedPlaque').style.display = 'block';
+        if (msgCount > 7) document.getElementById('speedPlaque').style.display = 'block';
         msgCount = 0;
     }, 4000);
 
     function speak(text, isAI = false) {
-        if (!audio) return;
+        if (!audioEnabled) return;
         if (isAI && aiMuted) return;
         if (!isAI && chatMuted) return;
 
+        // ИИ имеет приоритет и прерывает всё
         if (isAI) window.speechSynthesis.cancel();
-        else if (window.speechSynthesis.speaking && lastAI) return;
+        else if (window.speechSynthesis.speaking) return; 
 
-        const words = text.split(' ');
-        const limitedText = words.length > 50 ? words.slice(0, 50).join(' ') + "..." : text;
-        const utter = new SpeechSynthesisUtterance(limitedText.replace(/(https?:\/\/[^\s]+)/g, '').replace(/[^\p{L}\p{N}\s.,!?]/gu, ''));
-        utter.lang = 'ru-RU'; lastAI = isAI;
+        const cleanText = text.replace(/(https?:\/\/[^\s]+)/g, '').replace(/[^\p{L}\p{N}\s.,!?]/gu, '');
+        const utter = new SpeechSynthesisUtterance(cleanText);
+        utter.lang = 'ru-RU';
+        utter.rate = 1.0;
         window.speechSynthesis.speak(utter);
     }
 
-    async function fetchAI(q) {
+    async function fetchAI(query) {
         try {
-            const seed = Math.floor(Math.random() * 100000);
-            // Упрощенный системный промпт через GET
-            const sys = "Отвечай_кратко_до_50_слов_на_русском_без_кода";
-            const url = `https://text.pollinations.ai/${encodeURIComponent(q)}?model=openai&system=${sys}&seed=${seed}`;
+            const seed = Math.floor(Math.random() * 1000000);
+            const systemPrompt = "Ты - веселый ИИ стример. Отвечай кратко (до 40 слов), дерзко, на русском языке. Никакого кода.";
             
-            const res = await fetch(url);
-            if (!res.ok) throw new Error(`Server ${res.status}`);
+            const url = `https://text.pollinations.ai/${encodeURIComponent(query)}?model=openai&system=${encodeURIComponent(systemPrompt)}&seed=${seed}`;
             
-            const text = await res.text();
-            if (text.includes("```") || text.includes("function")) return "Я не пишу код.";
-            return text.trim() || "Нет ответа.";
-        } catch(e) { 
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`Ошибка API: ${response.status}`);
+            
+            const result = await response.text();
+            
+            // Защита от выдачи кода
+            if (result.includes("```") || result.includes("function") || result.includes("const ")) {
+                return "Я не пишу код, я здесь для общения!";
+            }
+            
+            return result.trim() || "Не знаю что ответить на это...";
+        } catch (e) {
             console.error(e);
-            return `Ошибка: ${e.message}. Попробуй еще раз.`; 
+            return `Сбой нейросети: ${e.message}`;
         }
     }
 
@@ -201,42 +213,58 @@
 
     function connect() {
         if (ws) { ws.onclose = null; ws.close(); }
+        
         ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
+
         ws.onopen = () => {
             ws.send(`PASS SCHMOOPIIE`);
-            ws.send(`NICK justinfan${Math.floor(Math.random() * 9999)}`);
+            ws.send(`NICK justinfan${Math.floor(Math.random() * 99999)}`);
             ws.send(`JOIN #${channel}`);
             document.getElementById('led').className = 'led on';
             document.getElementById('stTxt').textContent = `LIVE: ${channel.toUpperCase()}`;
-            addMsg('', `🟢 Подключено к #${channel}`, 'sys');
+            addMsg('', `🟢 Подключено к каналу #${channel}`, 'sys');
         };
+
         ws.onmessage = async (e) => {
-            if (e.data.startsWith('PING')) { ws.send('PONG :tmi.twitch.tv'); return; }
-            const m = e.data.match(/:(\w+)!.*PRIVMSG #\w+ :(.*)/);
-            if (m) {
-                const u = m[1], msg = m[2].trim();
-                addMsg(u, msg);
-                if (msg.toLowerCase().startsWith('!ai')) {
-                    const q = msg.slice(3).trim();
-                    if (q) {
-                        addMsg('🤖 AI', '⚡ Обработка...', 'ai');
-                        const ans = await fetchAI(q);
-                        const isErr = ans.startsWith("Ошибка");
-                        const lastMsg = document.getElementById('chatBox').lastChild;
-                        lastMsg.className = isErr ? "message err" : "message ai";
-                        lastMsg.innerHTML = `<b>🤖 AI</b> ${ans}`;
-                        if(!isErr) speak(ans, true);
+            if (e.data.startsWith('PING')) {
+                ws.send('PONG :tmi.twitch.tv');
+                return;
+            }
+
+            const match = e.data.match(/:(\w+)!.*PRIVMSG #\w+ :(.*)/);
+            if (match) {
+                const user = match[1];
+                const message = match[2].trim();
+
+                if (message.toLowerCase().startsWith('!ai')) {
+                    const question = message.slice(3).trim();
+                    if (question) {
+                        // Создаем временное сообщение и сохраняем ссылку на него
+                        const aiElement = addMsg('🤖 AI', '⚡ Обрабатываю запрос...', 'ai');
+                        
+                        const answer = await fetchAI(question);
+                        
+                        // Обновляем текст именно в том сообщении, которое создали
+                        if (answer.startsWith("Сбой")) {
+                            aiElement.className = "message err";
+                        }
+                        aiElement.innerHTML = `<b>🤖 AI:</b> ${answer}`;
+                        speak(answer, true);
                     }
-                } else { speak(msg, false); }
+                } else {
+                    addMsg(user, message);
+                    speak(`${user} говорит: ${message}`, false);
+                }
             }
         };
+
         ws.onclose = () => {
-            window.speechSynthesis.cancel();
             document.getElementById('led').className = 'led re';
-            document.getElementById('stTxt').textContent = 'RECONNECT...';
-            setTimeout(connect, 2000);
+            document.getElementById('stTxt').textContent = 'ПЕРЕПОДКЛЮЧЕНИЕ...';
+            setTimeout(connect, 3000);
         };
     }
 </script>
+
 </body>
 </html>
